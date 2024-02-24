@@ -49,7 +49,7 @@ function runner(line) {
     }
 
     if (this.token.touched()) {
-        console.log(this.token)
+        // console.log(this.token)
         this.store.push(this.token)
     } else {
         this.untouchedTokenError()

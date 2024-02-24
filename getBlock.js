@@ -7,12 +7,13 @@ function getBlock({
     includeStartpoint = null,
     to = null
 } = {}) {
+
     const push = () => {
         const cur = this.eat()
         this.token.push(cur)
     }
 
-    const startIndent = this.token.startIndent
+    const startIndent = this.startInd
 
     while (this.notDone()) {
         push()

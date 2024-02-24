@@ -56,6 +56,7 @@ class LineScanner {
     }
     constructor(blocks = []) {
         this.blocks = blocks
+        // throw blocks
         this.indentTracker = new IndentTracker(this)
     }
     scan(s) {

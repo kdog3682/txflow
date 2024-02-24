@@ -30,37 +30,25 @@ function parser(tokens) {
 }
 
 class ContextNode extends Element {
-    toJSON(solo) {
-        const get1 = (node) => {
+    toJSON() {
+        const get = (node) => {
             const json = {
                 contents: toContentString(node),
                 type: node.type,
                 count: node.count,
-                name: node.blockName,
+                name: node.blockName || node.name,
                 attributes: node.attributes
             }
             return json
         }
-        const get2 = (node) => {}
-
-        const get = get1
-
-        if (solo) {
-            return get(this)
-        }
-        const fn = (node, children) => {
-            const json = get(node)
-            if (children) {
-                json.children = children
-            }
-            return json
-        }
+        return get(this)
+    }
+    toString(fn) {
         return this.toRepr(fn)
     }
-    toString() {
-        return this.toRepr(demoString)
-    }
 }
+
+
 function toContentString({ startIndent, contents }) {
     if (empty(contents)) {
         return ""
@@ -73,58 +61,4 @@ function toContentString({ startIndent, contents }) {
         return " ".repeat(spaces * k) + text + "\n".repeat(nl)
     }
     return contents.map(normalize).join("\n")
-}
-function demoString(node, children) {
-    const childString = children ? newlineIndent(children) : ""
-    // console.log({childString})
-    const order = ["name", "type", "attributes", "count", "content", "children"]
-    const base = entries(node.toJSON(true))
-    // console.log(base); throw "base"
-    const items = rigidSort(base, order)
-
-    let s = ""
-    const get = (b, a, s) => {
-        if (!hasValue(b)) {
-            return ""
-        }
-        if (a == "attributes") {
-            return a + ": " + JSON.stringify(b) + "\n"
-        }
-
-        if (a == "contents") {
-            return a + ": " + newlineIndent(b).trimStart()
-        }
-        if (a == "children") {
-            if (s == "") {
-            } else {
-                return "\n" + a + ": " + b + "\n"
-            }
-            // console.log({s})
-        }
-
-        return a + ": " + b + "\n"
-    }
-
-    items.push(["children", childString])
-    const length = count(
-        items.map((item) => item[1]),
-        hasValue
-    )
-    for (const [a, b] of items) {
-        if (!hasValue(b)) {
-            continue
-        }
-        s += get(b, a, s)
-        // console.log(items.length)
-        // if (length == 1) {
-        // s = s.slice(0, -1)
-        // }
-        // if (a == 'contents') {
-        // s += '\n\n'
-        // }
-    }
-    // console.log({s})
-    return s
-    return s.trimEnd()
-    return s.slice(0, -1)
 }
