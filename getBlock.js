@@ -4,7 +4,7 @@ export {
 
 function getBlock({
     includeEndpoint = false,
-    includeStartpoint = null,
+    includeStartpoint = true,
     to = null
 } = {}) {
 
@@ -15,8 +15,18 @@ function getBlock({
 
     const startIndent = this.startInd
 
+    let count = 0
     while (this.notDone()) {
-        push()
+        if (count++ == 0) {
+             if (includeStartpoint) {
+                push()
+             } else {
+                this.eat()
+             }
+        } else {
+            push()
+        }
+        // console.log(this.index, startIndent)
         const next = this.peek()
         if (to) {
             if (to.test(next.text)) {

@@ -19,6 +19,7 @@ function parser(tokens) {
             node = node.exit(n)
         }
         const j = token.toJSON()
+        normalizeContents(j)
         if (type && type != "default") {
             const key = ind + "-" + type
             j.count = tally.add(key)
@@ -29,22 +30,34 @@ function parser(tokens) {
     return root
 }
 
+
+function normalizeContents(token) {
+    const indent = token.startIndent
+    token.contents.forEach((content, i) => {
+        const spaces = Math.max(content.ind - token.startIndent, 0)
+        content.raw = ' '.repeat(spaces * 4) + content.text + '\n'.repeat(content.newlines)
+    })
+    token.computedText = token.contents.map((x) => x.raw).join('\n')
+}
+
+function normalizeIndents(token) {
+    token.contents.forEach((content, i) => {
+        content.ind - token.startIndent
+    })
+}
 class ContextNode extends Element {
     toJSON() {
-        const get = (node) => {
-            const json = {
-                contents: toContentString(node),
-                type: node.type,
-                count: node.count,
-                name: node.blockName || node.name,
-                attributes: node.attributes
-            }
-            return json
+        return {
+            contents: toContentString(this),
+            type: this.type,
+            startIndent: this.startIndent,
+            count: this.count,
+            name: this.blockName || this.name,
+            attributes: this.attributes
         }
-        return get(this)
     }
     toString(fn) {
-        return this.toRepr(fn)
+        return this.toRepr(fn || ((x) => JSON.stringify(x.toJSON())))
     }
 }
 

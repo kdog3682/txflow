@@ -20,22 +20,28 @@ function interpreter(node, blocks) {
 }
 
 const fnRef = {
+    default(node, children) {
+        return node.contents.map(({text, newlines}, i) => {
+            return text
+        }).join('\n')
+    },
     component(node, children) {
-        let s = `#ComponentRenderer(${node.name}`
+        let t = `#ComponentRenderer("${node.name}"`
+        let s = ''
         if (node.attributes) {
-            s += ', '
-            s += toStringArgumentPretty(node.attributes, {lang: "typst", max_length: 1})
+            t += ', '
+            s += 'kwargs: ' + toStringArgumentPretty(node.attributes, {lang: "typst", max_length: 1})
         }
-
         // if (node.properties) {
             // s += ', '
             // s += toStringArgumentPretty(node.properties, {lang: "typst"})
         // }
+
         if (children.length) {
-            s += ', '
-            s += newlineIndent(children.join(',\n\n'))
+            s += ',\n'
+            s += children.join(',\n\n')
         }
-        return s
+        return t + newlineIndent(s)
     }
 }
 const componentRef = {
@@ -45,16 +51,16 @@ const componentRef = {
 }
 const blockRef = {
     typst(node) {
-        // throw node
-        // throw node.content
+        return 'typst'
+        throw node
         // return node.content
     }
 }
 function demoString(node, children) {
     if (node.type !=  'default') {
         
-    console.log('type', node.type || 'no type', 'name', node.name || 'no name')
     }
+    // console.log('type', node.type || 'no type', 'name', node.name || 'no name')
     let componentFn = componentRef[node.name]
     if (!componentFn && node.type in fnRef) {
         componentFn = fnRef[node.type]
@@ -64,12 +70,16 @@ function demoString(node, children) {
     }
     if (componentFn) {
         notify('using fnRef: $name to render the node', componentFn)
-        // throw 'x'
+        // console.log(componentFn); throw "throwing"
         const value = componentFn(node, children)
         if (value) {
             return value
         }
     }
+    panic('we are using fnRef or blockRef $type needs such a ref', node)
+
+
+    throw node.type
     const childString = children ? newlineIndent(children) : ""
     const order = ["name", "type", "attributes", "count", "content", "children"]
     const base = entries(node.toJSON())

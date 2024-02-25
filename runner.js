@@ -1,5 +1,6 @@
 import {
     isArray,
+    getLast,
     bool,
 } from "/home/kdog3682/2023/utils.js"
 
@@ -17,11 +18,16 @@ function runner(line) {
             }
             return
         }
+        // block.check ... should be renamed
         return block.check(line)
     }
 
     this.startInd = line.ind
     const block = this.blocks.find(finder)
+    if (block.ignorable) {
+        this.eat()
+        return 
+    }
     const startIndent = this.indentTracker.onStart(block, line)
 
     if (startIndent === false) {
@@ -30,8 +36,8 @@ function runner(line) {
 
     this.token = this.createToken()
     this.token.set("type", block.type, true)
-    this.token.set("startIndent", startIndent)
-    this.token.set("startIndex", line.index)
+    this.token.set("startIndent", startIndent, true)
+    this.token.set("startIndex", line.index, true)
 
     if (block.advanceOnMatch) {
         this.eat()
@@ -49,8 +55,13 @@ function runner(line) {
     }
 
     if (this.token.touched()) {
-        // console.log(this.token)
-        this.store.push(this.token)
+        const last = getLast(this.store)
+        if (this.token.type == 'default' && last?.type == 'default') {
+            // console.log(this.token)
+            last.contents.push(...this.token.contents)
+        } else {
+            this.store.push(this.token)
+        }
     } else {
         this.untouchedTokenError()
     }

@@ -55,7 +55,11 @@ class LineScanner {
         return token
     }
     constructor(blocks = []) {
-        this.blocks = blocks
+        const filter = (block) => {
+            return block.check || block.match
+        }
+
+        this.blocks = blocks.filter(filter)
         // throw blocks
         this.indentTracker = new IndentTracker(this)
     }
@@ -110,6 +114,9 @@ class LineScanner {
                 break
             }
         }
+        // if (exists(attrStore)) {
+            // throw attrStore
+        // }
 
         if (exists(attrStore)) {
             const attributes = lazyObjectParser(attrStore)
