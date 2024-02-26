@@ -28,13 +28,11 @@ const s = `
 // hi guys
 
 flex asdf = adsfasdf aa  = aaaaa
-    asdas: 111111
     // dddasdas: 111111
     // sdf: sdfsdf
         // adf: 111
 
     flex asdf = adf
-        adsf:adsfasdf
 
         adfadsf
         adfadsf
@@ -44,7 +42,7 @@ flex asdf = adsfasdf aa  = aaaaa
         yyadfadsf
 
         flex
-            hi
+            abc
             bye
             hi
             bye

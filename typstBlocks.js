@@ -122,6 +122,7 @@ const typstBlocks = [
         match: componentNames,
         // blocks.js turns arrays into regexes via reTemplate
         attributable: true,
+        needsToAdvance: true,
         run() {
             this.token.set("name", this.matches[0], true)
         },
@@ -134,14 +135,15 @@ const typstBlocks = [
             const prefix = isComp ? '' : '#'
             let t = `${prefix}ComponentRenderer("${node.name}"`
             let s = ''
+            t += ', '
             if (node.attributes) {
-                t += ', '
+                // throw node.attributes
                 s += toStringArgumentPretty(node.attributes, {lang: "typst", max_length: 1, noWrapper: true})
+                s += ',\n'
                 // we set no wrapper
                 // so that it is directly filled
             }
             if (node.children.length) {
-                s += ',\n'
                 s += node.children.map(this.visit).join(',\n\n')
             }
             return t + newlineIndent(s) + ')'

@@ -42,10 +42,16 @@ function runner(line) {
     if (block.advanceOnMatch) {
         this.eat()
     }
+    let res1
     if (block.attributable) {
-        this.maybeGetProperties()
+        res1 = this.maybeGetProperties()
     }
-    this.maybeGetAttributes()
+    let res2 = this.maybeGetAttributes()
+    if (res1 === false && res2 === false && block.needsToAdvance) {
+        this.eat()
+        // throw this.peek()
+        // this.token.push(this.eat())
+    }
 
     if (this.notDone()) {
         const status = block.run.call(this)

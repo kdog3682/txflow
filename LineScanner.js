@@ -114,14 +114,12 @@ class LineScanner {
                 break
             }
         }
-        // if (exists(attrStore)) {
-            // throw attrStore
-        // }
-
         if (exists(attrStore)) {
             const attributes = lazyObjectParser(attrStore)
             this.token.set("attributes", attributes, true)
             return true
+        } else {
+            return false
         }
     }
     maybeGetProperties() {
@@ -133,6 +131,10 @@ class LineScanner {
         if (properties) {
             this.eat()
             this.token.set("properties", properties, true)
+            return true
+        } else {
+            // necessary to bypass the line ... ?
+            return false
         }
     }
 
