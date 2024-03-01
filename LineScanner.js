@@ -1,8 +1,8 @@
-import { forEach, push2, stateGetter, getLast, exists, findall, dict, toArgument, getCaller, xassert, getLineTokens } from "/home/kdog3682/2023/utils.js"
+import { deepAssign, push, forEach, push2, stateGetter, getLast, exists, findall, dict, toArgument, getCaller, xassert, getLineTokens } from "/home/kdog3682/2023/utils.js"
 import { lazyObjectParser } from "/home/kdog3682/2023/lazyObjectParser2.js"
 import { IndentTracker } from "./IndentTracker.js"
 
-import { getBlock } from "./getBlock.js"
+import { _getBlock, getBlock } from "./getBlock.js"
 import { runner } from "./runner.js"
 
 export {
@@ -21,7 +21,7 @@ class LineToken {
         return this.contents.length || this._touched
     }
     push(s) {
-        push2(this.contents, s)
+        push(this.contents, s)
     }
     toJSON() {
         return {
@@ -34,6 +34,11 @@ class LineToken {
         if (ref) {
             Object.assign(ref, payload)
         }
+    }
+    assign(...args) {
+        this.keys.push(args[0])
+        this.touched(true)
+        deepAssign(this, ...args)
     }
     set(k, v, save) {
         xassert(
@@ -54,18 +59,18 @@ class LineScanner {
         forEach(o, ([k,v]) => token.set(k, v, true))
         return token
     }
-    constructor(blocks = []) {
+    constructor({blocks = [], options= {}}= {}) {
         const filter = (block) => {
             return block.check || block.match
         }
 
         this.blocks = blocks.filter(filter)
-        // throw blocks
+        // console.log(blocks); throw "blocks"
         this.indentTracker = new IndentTracker(this)
+        this.options = options
     }
     scan(s) {
         this.lines = getLineTokens(s)
-        // throw this.lines
         this.size = this.lines.length
         this.store = []
         this.index = 0
@@ -141,8 +146,6 @@ class LineScanner {
     untouchedTokenError() {
         // console.log(this.token)
         // console.log(this.eat())
-        // throw this.token
-        // if
         console.log(this.token)
         console.log(line)
         console.log(
@@ -150,10 +153,11 @@ class LineScanner {
         )
         console.log(block)
         console.log(getCaller())
-        throw ""
+        panic('untouched error')
     }
 }
 
 
 LineScanner.prototype.getBlock = getBlock
+LineScanner.prototype._getBlock = _getBlock
 LineScanner.prototype.runner = runner

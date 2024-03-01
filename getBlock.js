@@ -1,23 +1,31 @@
 export {
+    _getBlock,
     getBlock,
 }
+function getBlock(o) {
+    const block = this._getBlock(o)
+    this.token.push(block)
+}
 
-function getBlock({
+function _getBlock({
     includeEndpoint = false,
     includeStartpoint = true,
-    to = null
+    to = null,
 } = {}) {
 
+    const store = []
     const push = () => {
-        const cur = this.eat()
-        this.token.push(cur)
+        const val = this.eat()
+        store.push(val)
     }
 
-    const startIndent = this.startInd
+    // let startIndent = this.startInd
+    let startIndent
 
     let count = 0
     while (this.notDone()) {
         if (count++ == 0) {
+            startIndent = this.peek().ind
              if (includeStartpoint) {
                 push()
              } else {
@@ -47,4 +55,6 @@ function getBlock({
             break
         }
     }
+
+    return store
 }

@@ -42,15 +42,15 @@ function runner(line) {
     if (block.advanceOnMatch) {
         this.eat()
     }
-    let res1
-    if (block.attributable) {
-        res1 = this.maybeGetProperties()
-    }
-    let res2 = this.maybeGetAttributes()
-    if (res1 === false && res2 === false && block.needsToAdvance) {
-        this.eat()
-        // throw this.peek()
-        // this.token.push(this.eat())
+    if (this.options.implicitlyGetAttributes) {
+        let res1
+        if (block.attributable) {
+            res1 = this.maybeGetProperties()
+        }
+        let res2 = this.maybeGetAttributes()
+        if (res1 === false && res2 === false && block.needsToAdvance) {
+            this.eat()
+        }
     }
 
     if (this.notDone()) {
@@ -62,7 +62,7 @@ function runner(line) {
 
     if (this.token.touched()) {
         const last = getLast(this.store)
-        if (this.token.type == 'default' && last?.type == 'default') {
+        if (this.options.combineDefaults && this.token.type == 'default' && last?.type == 'default') {
             // console.log(this.token)
             last.contents.push(...this.token.contents)
         } else {
