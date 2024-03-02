@@ -1,6 +1,6 @@
 import { txflow } from "../main.js"
 
-const s = `
+const sa = `
 
 props: abc, def
 foobar: 123
@@ -30,6 +30,25 @@ container foo = bar
             hola(this.abcde)
         }
         asdf = aaa
+`
+// show
+// debug:abc
+const s = `
+
+name: v-child
+
+data:
+    student:
+        name: sam
+        age: 10
+            
+p {student.name}
+p {student.age}
+p hi from {student.name}
+    click() {
+        console.log(this.student.name)
+    }
+
 `
 
 console.log(txflow(s, 'vue', ''))

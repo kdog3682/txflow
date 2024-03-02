@@ -11,7 +11,53 @@ import { lazyObjectParser } from "../../2023/lazyObjectParser2.js"
 import { xmlString } from "../../2023/xmlString2.js"
 import { htmlParser } from "../../2023/htmlParser2.js"
 
-
+const switchBlock = {
+    priority: "A",
+    type: "switch",
+    match: /^switch +(.+)/,
+    automaticallyMatch: true,
+    visit(node) {
+        let switchExpr = node.switch
+        if (!isWord(switchExpr)) {
+            switchExpr = this.state.namer("switch")
+            const body =
+                "return " + node.switch.replace(/\((\w+)\)/g, "(this.$1)")
+            const switcherFn = buildFunction({ body }, Function)
+            this.state.addFunction("computed", switchExpr, switcherFn)
+        }
+        node.children
+            .filter((x) => x.type == "case")
+            .forEach((child, i) => {
+                child.switchExpr = switchExpr
+                child.switchCount = i
+            })
+        const values = node.children.map(this.visit).filter(exists)
+        node.assign({ tag: "div", class: "switch-container" })
+        return this.state.wrap(node, values)
+    }
+}
+// the priorities should have started lower
+// and as you need them to go higher ...
+// when one side doesnt give the same amount
+const caseBlock = {
+    priority: "A",
+    type: "case",
+    match: /^case +(.+)|^(default)$/,
+    automaticallyMatch: true,
+    visit(node) {
+        assert(node.children.length == 1)
+        const m = node.case
+        const key =
+            m == "default"
+                ? "v-else"
+                : node.switchCount == 0
+                ? "v-if"
+                : "v-else-if"
+        const value = m == "default" ? "" : `${node.switchExpr} == '${m}'`
+        node.firstChild.assign("attrs", key, value)
+        return this.visit(node.firstChild)
+    }
+}
 const inlineDirective = {
     priority: "A",
     type: "directive",
@@ -19,8 +65,9 @@ const inlineDirective = {
     run() {
         this.eat()
         const [a, b] = this.matches
-        this.token.assign('state', 'attrs', a, b)
-        this.token.assign('directive', b)
+        this.token.assign("state", "attrs", a, b)
+        this.token.assign("directive", b)
+        this.token.assign("implied", [b])
     },
     visit(node) {
         node.parent.assign(node.state)
@@ -40,13 +87,28 @@ const inlineDirective = {
 const attrBlock = {
     priority: "A",
     type: "attribute",
-    match: /^([:@])?([a-zA-Z][$\w-_.]*)(?: *= *(.+))?$/,
+    match: /^([:@]#)?([a-zA-Z]{2,}[$\w-_.]*)(?: *= *(.+))$|^([:@])([a-zA-Z]{2,}[$\w-_.]*)$/,
     run() {
         this.eat()
-        const [a, b, c] = this.matches
-        const label = a == ":" ? "props" : a == "@" ? "events" : "attrs"
-        const key = b
+        let [a, b, c, d, e] = this.matches
+        // console.log({a, b, c, d, e})
+        if (d) {
+            a = d
+            b = e
+        }
+        let label = a == ":" ? "props" : a == "@" ? "events" : "attrs"
+        const isSlot = a == "#"
+        if (isSlot) {
+            label = "#" + label
+        }
+        const key = variables.vmap2[b] || b
         const value = c || b
+        if (key == "v-for") {
+            return handleFor(this, c)
+        }
+        if (key == "v-if" || key == "v-else-if" || isSlot || key == "v-model") {
+            this.token.assign("implied", [value])
+        }
         this.token.assign("state", label, key, value)
     },
     visit(node) {
@@ -68,17 +130,29 @@ const functionBlock = {
 }
 
 const commentBlock = {
-    match: /^\/{2,}/,
+    match: /^\/{2,} *(debug)?/,
     type: "comment",
-    ignorable: true,
-    priority: "A"
+    automaticallyEat: true,
+    // ignorable: true,
+    priority: "A",
+    run() {
+        const mode = this.matches[0]
+        if (mode) {
+            switch (mode) {
+                case "debug":
+                    this.options.debug = true
+                // throw this.options
+            }
+        }
+        this.token.touched(false)
+    }
 }
 
 const lopBlock = {
     priority: 1000,
     desc: "lops and labels",
     type: "lop",
-    match: /^([a-zA-Z][\w-]+) *:/,
+    match: /^([a-zA-Z][\w-]+):(?: +\w+.*)?$/,
     run() {
         this.getBlock({ includeEndpoint: false })
     },
@@ -88,10 +162,10 @@ const lopBlock = {
             // booga: dinosaur
             // fooga: foogasaur
             directive(componentState, parent, b) {
-                let s = 'v-'
+                let s = "v-"
                 s += b.name
 
-                parent.assign('attrs', s, b.value)
+                parent.assign("attrs", s, b.value)
                 this.state.implicits.push(b.value)
                 // you can have additional stuff ...
             },
@@ -123,15 +197,20 @@ const lopBlock = {
                 deepAssign(this.state.options, lop)
             }
         } else {
+            console.log(lop)
             if (a in lopRef) {
                 lopRef[a](this.state, node.parent, b)
+            } else if (someDepth(b, /^this\.\w+$/)) {
+                deepAssign(node.parent, "computedLopStyle", a, b)
             } else {
+                // console.log(lop)
                 node.parent.assign(csx.toStyleObject(csx.converter(lop)))
             }
         }
     }
 }
 
+/* @bookmark 1709344576 defaultblock */
 const defaultBlock = {
     priority: 1000,
     type: "default",
@@ -142,6 +221,12 @@ const defaultBlock = {
             container: "v-container"
         }
         const parsed = htmlParser(line.text)
+        // console.log({parsed})
+        if (this.options.debug) {
+            console.log(getCaller(), parsed)
+        }
+        if (parsed.implied) this.token.set("implied", parsed.implied, true)
+        if (parsed.ignored) this.token.set("ignored", parsed.ignored, true)
         if (parsed.component in aliases) {
             parsed.component = aliases[parsed.component]
         }
@@ -151,28 +236,31 @@ const defaultBlock = {
         if (node.state.component) {
             this.state.assign("componentKeys", [node.state.component])
         }
-        const children = filter(node.children.map(this.visit))
-        return xmlString(node.state, children)
+        const children = this.visitChildren(node)
+        return this.state.wrap(node, children)
     }
 }
 
+const rootVisitBlock = {
+        type: "Root",
+        visit(node) {
+            let template = node.children
+                .map(this.visit)
+                .filter(exists)
+                .join("\n")
+            return this.state.build(node, template)
+        }
+}
 const vueBlocks = [
+    caseBlock,
+    switchBlock,
     functionBlock,
     inlineDirective,
     attrBlock,
     commentBlock,
     lopBlock,
     defaultBlock,
-    {
-        type: "Root",
-        visit(node) {
-            let template = node.children
-                .map(this.visit)
-                .filter(isDefined)
-                .join("\n")
-            return this.state.build(node, template)
-        }
-    }
+    rootVisitBlock,
 ]
 
 function passChildrenDown(node, father) {
@@ -180,3 +268,38 @@ function passChildrenDown(node, father) {
     intermediate.append(node.children)
     node.children = [intermediate]
 }
+function handleFor(state, c) {
+    const r = /^\(?(\w+)(?:, *(\w+)\)?) +in +(.+)/
+    const [key, index, expr] = match(c, r)
+    const text = index ? `(${key}, ${index}) in ${expr}` : `${key} in ${expr}`
+    const ignored = flat(key, index)
+    const implied = match(expr, /(\w+)(?:$|[.])/)
+    state.token.assign("ignored", ignored)
+    state.token.assign("implied", [implied])
+    state.token.assign("state", "attrs", "v-for", text)
+}
+
+function someDepth(o, r) {
+    if (isString(o)) {
+        if (r.test(o)) {
+            return true
+        }
+        return false
+    }
+    function runner(o) {
+        for (const [k, v] of Object.entries(o)) {
+            if (isString(v)) {
+                if (r.test(v)) {
+                    return true
+                }
+            } else if (isObject(v)) {
+                let status = runner(v)
+                if (status === true) {
+                    return true
+                }
+            }
+        }
+    }
+    return runner(o)
+}
+/* @bookmark 1709344576 defaultblock */

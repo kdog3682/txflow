@@ -7,6 +7,7 @@ export { parser }
 function parser(tokens) {
     let node = new ContextNode()
     let root = node
+    root.type = 'Root'
     let currentInd = 0
     const tally = new Tally()
     for (const token of tokens) {

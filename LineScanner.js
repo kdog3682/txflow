@@ -63,15 +63,13 @@ class LineScanner {
         const filter = (block) => {
             return block.check || block.match
         }
-
         this.blocks = blocks.filter(filter)
-        // console.log(blocks); throw "blocks"
-        this.indentTracker = new IndentTracker(this)
         this.options = options
     }
     scan(s) {
         this.lines = getLineTokens(s)
         this.size = this.lines.length
+        this.indentTracker = new IndentTracker(this)
         this.store = []
         this.index = 0
         this._count = 0
@@ -144,10 +142,10 @@ class LineScanner {
     }
 
     untouchedTokenError() {
+        return 
         // console.log(this.token)
         // console.log(this.eat())
         console.log(this.token)
-        console.log(line)
         console.log(
             "the token always needs to be touched. ie ... something needs to be pushed into its store. aggregation of newlines occurs after touching. so there should never be a case where this becomes active"
         )

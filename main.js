@@ -1,5 +1,6 @@
 export {
-    txflow
+    txflow,
+    factory,
 }
 import { getOptions } from "./getOptions.js"
 import { parser } from "./parser.js"
@@ -11,6 +12,26 @@ import { createVisitor } from "/home/kdog3682/2024-javascript/js-toolkit/createC
 
 // flavor: markdown | vue | typst
 // mode  : str | json
+function factory(flavor, topOptions) {
+    const options = getOptions(flavor)
+    const scanner = new LineScanner(options)
+    const visitor = createVisitor(options.blocks)
+
+    return function txflow(s, innerOptions) {
+        const tokens = scanner.scan(s)
+        const root = parser(tokens)
+        if (options.state) {
+            visitor.state = new options.state()
+        }
+        if (topOptions) {
+            Object.assign(visitor.state.options, topOptions)
+        }
+        if (innerOptions) {
+            Object.assign(visitor.state.options, innerOptions)
+        }
+        return visitor.visit(root)
+    }
+}
 function txflow(s, flavor = 'typst', mode = 'str') {
     const options = getOptions(flavor)
     const scanner = new LineScanner(options)
@@ -19,7 +40,6 @@ function txflow(s, flavor = 'typst', mode = 'str') {
     console.log('---------')
     const tokens = scanner.scan(s)
     const root = parser(tokens)
-    root.type = 'Root'
     if (mode == 'ast') {
         return root
     }
