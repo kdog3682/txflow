@@ -38,7 +38,12 @@ function runner(line) {
     this.token.set("startIndent", startIndent, true)
     this.token.set("startIndex", line.index, true)
 
-    if (block.automaticallyEat) {
+    if (block.passMatchedArgs) {
+        this.eat()
+        args.push(...this.matches)
+    }
+
+    else if (block.automaticallyEat) {
         args.push(this.eat())
     }
 
@@ -72,9 +77,23 @@ function runner(line) {
 
     if (this.token.touched()) {
         const last = getLast(this.store)
-        if (this.options.combineDefaults && this.token.type == 'default' && last?.type == 'default') {
-            // console.log(this.token)
-            last.contents.push(...this.token.contents)
+        if (block.combine) {
+            if (last?.type == this.token.type) {
+                last.contents.push(...this.token.contents)
+            } else {
+                this.store.push(this.token)
+            }
+        }
+        else if (this.options.combineDefaults && this.token.type == 'default' && last?.type == 'default') {
+            if (this.combineDefaultsBreakOnNewlines) {
+                this.combineDefaultsBreakOnNewlines = false
+                this.store.push(this.token)
+            } else {
+                last.contents.push(...this.token.contents)
+                if (this.options.combineDefaultsBreakOnNewlines && this.token.contents[0].newlines) {
+                    this.combineDefaultsBreakOnNewlines = true
+                }
+            }
         } else {
             this.store.push(this.token)
         }

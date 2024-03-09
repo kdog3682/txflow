@@ -1,4 +1,6 @@
-import { txflow } from "../main.js"
+import * as txflow from "../main.js"
+
+const vuetify = txflow.factory('vue', {mode: 'template'})
 
 const sa = `
 
@@ -35,6 +37,10 @@ container foo = bar
 // debug:abc
 const s = `
 
+css:
+    .asdfasdf > sdfsd
+        stroke:
+            paint: blue
 name: v-child
 
 data:
@@ -51,5 +57,18 @@ p hi from {student.name}
 
 `
 
-console.log(txflow(s, 'vue', ''))
+// console.log(txflow(s, 'vue', ''))
 // ../vueBlocks.js
+
+
+const template = `
+    .header
+        v-date
+    .body
+        .item
+            v-pre :value = item
+    .footer
+        v-lorem value = 100
+`
+
+console.log(vuetify(template))
