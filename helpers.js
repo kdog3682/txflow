@@ -17,7 +17,7 @@ function normalizeContents(token) {
         const spaces = Math.max(content.ind - token.startIndent, 0)
         content.raw = ' '.repeat(spaces * 4) + content.text + '\n'.repeat(content.newlines)
     })
-    token.computedText = token.contents.map((x) => x.raw).join('\n')
+    token.computedText = token.contents.map((x) => x.raw).join('\n').trimEnd()
 }
 
 function normalizeIndents(token) {

@@ -20,6 +20,9 @@ function parser(tokens) {
             node = node.exit(n)
         }
         const j = token.toJSON()
+        if (j.contents.length == 1) {
+            j.newlines = j.contents[0].newlines
+        }
         // console.log(j)
         normalizeContents(j)
         if (type && type != "default") {

@@ -1,9 +1,11 @@
+// VMarkdownPagetExtension()
 
 import * as txflow from "../main.js"
 import { clip, read } from "/home/kdog3682/2023/node-utils.js"
 const opts = {
     lang: 'vuemd',
-    mode: 'html',
+    mode: 'json',
+    mode: 'str',
 }
 const vueMarkdown = txflow.factory(opts)
 
@@ -11,29 +13,21 @@ const vueMarkdown = txflow.factory(opts)
 // /home/kdog3682/2024-javascript/txflow/vuemdBlocks.js
 const file = '/home/kdog3682/bkl/website/student-teaching-advice.txf'
 
-// inoremap <buffer> e1 <space>=<space>
 const s = `
 
+
 flex
-    let a = 123
     function foo() {
-        console.log("hi")
+
     }
 
     hi
 
-
-    const a = 123
-    const b = 12
-
-    function foo() {
-
-    }
-
-    bye
-    
-
-
 `
-console.log(vueMarkdown(s))
+console.loggg(vueMarkdown(s))
 // console.log(vueMarkdown(read(file)))
+// some of my ideas were just wrong ...
+// ...
+
+
+vuemd is working ... 

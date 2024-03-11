@@ -91,6 +91,7 @@ function runner(line) {
             } else {
                 last.contents.push(...this.token.contents)
                 if (this.options.combineDefaultsBreakOnNewlines && this.token.contents[0].newlines) {
+                    throw this.token
                     this.combineDefaultsBreakOnNewlines = true
                 }
             }

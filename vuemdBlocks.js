@@ -20,7 +20,13 @@ function genericVisit(node) {
 const visitListBlock = {
         type: 'list',
     visit(node) {
-            return xmlString({tag: 'ul'}, [node.children.map(this.visit).join('\n')])
+        return xmlString({tag: 'ul'}, [node.children.map(this.visit).join('\n')])
+    },
+    jsonVisit(node) {
+        return {
+            tag: 'ul',
+            children: node.children.map(this.visit)
+        }
     }
 }
 const listBlock = {
@@ -39,11 +45,8 @@ const listBlock = {
             this.token.set('state', state, true)
         },
         hasImplicitParent: "list",
-        visit(node) {
-            const children = this.visitChildren(node)
-            // console.log({children})
-            return this.state.wrap(node, children)
-        }
+    visit: visitElement,
+    jsonVisit: jsonVisitElement,
 }
 const hashBlock = {
     priority: "A",
@@ -82,10 +85,20 @@ const pseudoComponentBlock = {
         this.token.set("state", state, true)
     },
     visit: visitElement,
-    // visit(node) {
-
-    // }
+    jsonVisit: jsonVisitElement
 }
+
+    function jsonWrap(node, children) {
+        return {
+            ...node.state,
+            children
+        }
+    }
+function jsonVisitElement(node) {
+        const children = this.visitChildren(node)
+        return jsonWrap(node, children)
+}
+
 function visitElement(node) {
         const children = this.visitChildren(node)
         return this.state.wrap(node, children)
@@ -112,10 +125,8 @@ const htmlBlock = {
         }
         this.token.set("state", parsed, true)
     },
-    visit(node) {
-        const children = this.visitChildren(node)
-        return this.state.wrap(node, children)
-    }
+    visit: visitElement,
+    jsonVisit: jsonVisitElement,
 }
 const switchBlock = {
     priority: "A",
@@ -342,27 +353,42 @@ const defaultMarkdownBlock = {
         // this.token.set("state", parsed, true)
     },
     visit(node) {
-        const text = node.contents.map((x) => x.text).join(' ')
         node.state = {
             component: 'v-markdown',
             attrs: {
-                value: text
-            }
+                value: node.computedText
+            },
         }
+        assignStyle(node, 'margin-bottom', node.newlines)
+
         const children = this.visitChildren(node)
         return this.state.wrap(node, children)
+    },
+    jsonVisit(node) {
+        return {
+            component: 'v-markdown',
+            // style:
+            value: node.computedText
+        }
     }
 }
 
 const rootVisitBlock = {
         type: "Root",
         visit(node) {
-            let template = node.children
-                .map(this.visit)
-                .filter(exists)
-                .join("\n")
-            return this.state.build(node, template)
-        }
+                const template = node.children
+                    .map(this.visit)
+                    .filter(exists)
+                    .join("\n")
+                return this.state.build(node, template)
+        },
+    jsonVisit(node) {
+            return {
+                tag: 'div',
+                class: 'root',
+                children: this.visitChildren(node)
+            }
+    }
 }
 const vuemdBlocks = [
     codeBlock,
@@ -425,4 +451,12 @@ function matcherf(ref) {
 }
 function visitNode(node) {
             return this.state.wrap(node, this.visitChildren(node))
+}
+
+function assignStyle(node, k, v) {
+    if (!v) {
+        return 
+    }
+    const style = csx.apply(k, v)
+    deepAssign(node, 'state', 'style', k, style)
 }

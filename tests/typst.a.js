@@ -1,4 +1,4 @@
-import { txflow } from "../main.js"
+import * as txflow from "../main.js"
 
 const s = `
 // hi guys
@@ -45,5 +45,5 @@ flex asdf = adsfasdf aa  = aaaaa
             asdfasdf
     }
 `
-
-console.log(txflow(s, 'typst'))
+const typstFlow = txflow.factory({lang: 'typst', mode: 'str'})
+console.log(typstFlow(s, 'typst'))
