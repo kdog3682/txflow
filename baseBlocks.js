@@ -41,6 +41,7 @@ const javascriptVarBlock = {
                 lang: "javascript"
             }
         }
+        return xmlString(payload)
         return xmlString(addExtraStyleToppings(payload, node))
     },
     jsonVisit(node) {
@@ -51,6 +52,7 @@ const javascriptVarBlock = {
                 lang: "javascript"
             }
         }
+        return payload
         return addExtraStyleToppings(payload, node) /* newlines */
     }
 }
@@ -71,28 +73,3 @@ function simpleStringComponent(name, value, opts) {
     return xmlString(payload)
 }
 
-function addExtraStyleToppings(payload, node) {
-    const ignore = []
-    if (ignore.includes(node.parent.state.class)) {
-    } else {
-        const children = node.parent.children
-        const lastIndex = children.length - 1
-        const index = children.indexOf(node)
-
-        if (index == 0) {
-            deepAssign(payload, "style", {
-                "margin-bottom": "1em"
-            })
-        } else if (index == lastIndex) {
-            deepAssign(payload, "style", {
-                "margin-above": "1em"
-            })
-        } else {
-            deepAssign(payload, "style", {
-                "margin-bottom": "1em",
-                "margin-top": "1em"
-            })
-        }
-    }
-    return payload
-}

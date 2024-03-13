@@ -37,7 +37,9 @@ const stateRef = {
 }
 const visitorRef = {
     vuemd: {
-        // stringify: xmlString,
+        componentAliases: {
+            default: "v-markdown"
+        }
     }
 }
 

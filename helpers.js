@@ -42,3 +42,5 @@ function toContentString(item) {
     }
     return contents.map(normalize).join("\n")
 }
+
+

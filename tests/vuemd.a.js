@@ -1,12 +1,37 @@
-// VMarkdownPagetExtension()
-
 import * as txflow from "../main.js"
 import { clip, read } from "/home/kdog3682/2023/node-utils.js"
+
 const opts = {
     lang: 'vuemd',
     mode: 'json',
-    mode: 'str',
+    // mode: 'str',
+    xstyles: {
+        Root: {
+            margins: {
+                type: 'smart',
+                handler(child, i) {
+                    if (i == 0) {
+                        return 
+                    }
+                    return '1em'
+                },
+            }
+        },
+        flex: {
+            margins: {
+                type: 'smart',
+                handler(child, i) {
+                    if (i == 0) {
+                        return 
+                    }
+                    return '1em'
+                },
+            }
+        }
+    },
+    // mode: 'str',
 }
+
 const vueMarkdown = txflow.factory(opts)
 
 // vueMarkdown(read(file))
@@ -25,9 +50,3 @@ flex
 
 `
 console.loggg(vueMarkdown(s))
-// console.log(vueMarkdown(read(file)))
-// some of my ideas were just wrong ...
-// ...
-
-
-vuemd is working ... 

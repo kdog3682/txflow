@@ -8,12 +8,11 @@ import { LineScanner } from "./LineScanner.js"
 import { interpreter } from "./interpreter.js"
 import { bug } from "/home/kdog3682/2024-javascript/js-toolkit/bug.js"
 import { createVisitor } from "/home/kdog3682/2024-javascript/js-toolkit/createCompiler.js"
-"/home/kdog3682/2024-javascript/txflow/blocks.js"
 
 // vuemd is very similar to vue 
 // flavor: markdown | vue | typst
 // mode  : str | json
-function factory(flavor, topOptions) {
+function factory(flavor, topOptions, innerOptionsFromTop) {
     if (isObject(flavor)) {
         topOptions = flavor
         flavor = pop2(topOptions, 'lang')
@@ -48,8 +47,15 @@ function factory(flavor, topOptions) {
             // innerOptions is assigned to the visitor.state
             // yes for vuemd (uses ComponentState)
             // no for typst (doesnt use external component state)
+            if (innerOptionsFromTop) {
+                Object.assign(visitor.state.options, innerOptionsFromTop)
+                // a convenience ... so you dont have to 
+                // assign fields in multiple places
+                // jsut do it all the from thop
+            }
         }
 
         return visitor.visit(root)
     }
 }
+

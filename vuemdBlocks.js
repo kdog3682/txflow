@@ -11,69 +11,136 @@ import { lazyObjectParser } from "../../2023/lazyObjectParser2.js"
 import { xmlString } from "../../2023/xmlString2.js"
 import { htmlParser } from "../../2023/htmlParser2.js"
 
-import {codeBlock, javascriptVarBlock, javascriptBlock} from "/home/kdog3682/2024-javascript/txflow/baseBlocks.js"
-
-function genericVisit(node) {
-        // const children = this.visitChildren(node)
-            return node.children.map(this.visit).join('\n')
+const codeBlock = {
+    priority: "A",
+    type: "codeblock",
+    match: /^(com|\$\$\$|typst|javascript|pre)/,
+    run() {
+        const name = this.matches[0]
+        this.token.set("blockName", name, true)
+        this.getBlock({ includeStartpoint: false, includeEndpoint: false })
+    },
+    jsonVisit(node) {
+        const value = {
+            component: "v-highlight-js",
+            props: {
+                lang: node.blockName,
+                value: node.computedText
+            }
+        }
+    }
 }
-const visitListBlock = {
-        type: 'list',
+const javascriptVarBlock = {
+    priority: "A",
+    type: "javascript",
+    combine: true,
+    match: /^(?:let|const) /,
+    run() {
+        if (isBlockEnter(this.peek().text)) {
+            this.getBlock({ includeEndpoint: true })
+        } else {
+            this.token.push(this.eat())
+        }
+    },
     visit(node) {
-        return xmlString({tag: 'ul'}, [node.children.map(this.visit).join('\n')])
+        const payload = {
+            component: "v-highlight-js",
+            props: {
+                value: node.computedText,
+                lang: "javascript"
+            }
+        }
+        return xmlString(payload)
+        return xmlString(addExtraStyleToppings(payload, node))
     },
     jsonVisit(node) {
         return {
-            tag: 'ul',
+            component: "v-highlight-js",
+            props: {
+                value: node.computedText,
+                lang: "javascript"
+            }
+        }
+    }
+}
+
+const javascriptBlock = {
+    priority: "A",
+    type: "javascript",
+    combine: true,
+    match: /^(?:async +)?(?:function +)?(\w+).*?{ *$/,
+    run() {
+        this.getBlock({ includeEndpoint: true })
+    }
+}
+function simpleStringComponent(name, value, opts) {
+    const base = { component: name, attrs: { value } }
+    const payload = deepAssign(base, opts)
+    return xmlString(payload)
+}
+
+
+const visitListBlock = {
+    type: "list",
+    visit(node) {
+        return xmlString({ tag: "ul" }, [
+            node.children.map(this.visit).join("\n")
+        ])
+    },
+    jsonVisit(node) {
+        return {
+            tag: "ul",
             children: node.children.map(this.visit)
         }
     }
 }
 const listBlock = {
-    priority: 'A',
-        type: "listItem",
-        preserveIndentState: true,
-        decrementTokenStartIndent: true,
-        match: /^-(?: +(.+))?$/,
-        attributable: false,
-        run() {
-            this.eat()
-            const state = {
-                tag: 'li',
-                text: this.matches[0],
-            }
-            this.token.set('state', state, true)
-        },
-        hasImplicitParent: "list",
+    priority: "A",
+    type: "listItem",
+    preserveIndentState: true,
+    decrementTokenStartIndent: true,
+    match: /^-(?: +(.+))?$/,
+    attributable: false,
+    run() {
+        this.eat()
+        const state = {
+            tag: "li",
+            text: this.matches[0]
+        }
+        this.token.set("state", state, true)
+    },
+    hasImplicitParent: "list",
     visit: visitElement,
-    jsonVisit: jsonVisitElement,
+    jsonVisit: 'simple',
 }
 const hashBlock = {
     priority: "A",
     type: "hash",
     match: /^#/,
-    visit(node) {
-
-    }
+    visit(node) {}
 }
 
 const pseudoComponentRef = {
     bold(s) {
         return {
-            tag: '', class: 'bold', value: s,
+            tag: "",
+            class: "bold",
+            value: s
         }
     },
     flex(s) {
         return {
-            tag: 'div', class: 'flex'
+            tag: "div",
+            class: "flex"
         }
     },
 
     container(s) {
         return {
-            tag: 'div', class: 'container'
+            tag: "div",
+            class: "container"
         }
-    },
+    }
 }
 const pseudoComponentBlock = {
     match: matcherf(pseudoComponentRef),
@@ -83,25 +150,15 @@ const pseudoComponentBlock = {
     run(tag, value) {
         const state = pseudoComponentRef[tag](value)
         this.token.set("state", state, true)
+        this.token.set("name", tag, true)
     },
-    visit: visitElement,
-    jsonVisit: jsonVisitElement
-}
-
-    function jsonWrap(node, children) {
-        return {
-            ...node.state,
-            children
-        }
-    }
-function jsonVisitElement(node) {
-        const children = this.visitChildren(node)
-        return jsonWrap(node, children)
+    jsonVisit: 'simple',
+    visit: visitElement
 }
 
 function visitElement(node) {
-        const children = this.visitChildren(node)
-        return this.state.wrap(node, children)
+    const children = this.visitChildren(node)
+    return this.state.wrap(node, children)
 }
 const vueComponentBlock = {
     priority: "A",
@@ -121,12 +178,12 @@ const htmlBlock = {
     run(tag, text) {
         const parsed = {
             tag,
-            text,
+            text
         }
         this.token.set("state", parsed, true)
     },
     visit: visitElement,
-    jsonVisit: jsonVisitElement,
+    jsonVisit: 'simple',
 }
 const switchBlock = {
     priority: "A",
@@ -153,28 +210,6 @@ const switchBlock = {
         return this.state.wrap(node, values)
     }
 }
-// the priorities should have started lower
-// and as you need them to go higher ...
-// when one side doesnt give the same amount
-const caseBlock = {
-    priority: "A",
-    type: "case",
-    match: /^case +(.+)|^(default)$/,
-    automaticallyMatch: true,
-    visit(node) {
-        assert(node.children.length == 1)
-        const m = node.case
-        const key =
-            m == "default"
-                ? "v-else"
-                : node.switchCount == 0
-                ? "v-if"
-                : "v-else-if"
-        const value = m == "default" ? "" : `${node.switchExpr} == '${m}'`
-        node.firstChild.assign("attrs", key, value)
-        return this.visit(node.firstChild)
-    }
-}
 const inlineDirective = {
     priority: "A",
     type: "directive",
@@ -190,27 +225,6 @@ const inlineDirective = {
         node.parent.assign(node.state)
         this.state.implicits.push(node.directive)
     }
-}
-
-// never ask yijie about work
-// never ask him to see your point of view
-// my parents ... were just doing their best
-// and they did alright ...
-// but one pair of adults just isnt enough.
-// you need more support than 25% to 50% of your parents.
-// we were just kids
-// i can provide warm support
-
-const constBlock = {
-    priority: "A",
-    type: "const",
-    run() {
-        this.getBlock({ includeEndpoint: true })
-    },
-    match: /^const +(\w+)/
-    // visit(node) {
-        // this.
-    // }
 }
 
 const attrBlock = {
@@ -246,7 +260,6 @@ const attrBlock = {
     }
 }
 
-
 const commentBlock = {
     match: /^\/{2,} *(debug)?/,
     type: "comment",
@@ -264,7 +277,7 @@ const commentBlock = {
         this.token.touched(false)
     },
     visit(node) {
-        return 
+        return
     }
 }
 
@@ -307,7 +320,7 @@ const lopBlock = {
         }
         const lopFnRef = {
             css: csx.toHtmlStyle,
-            name: dashCase,
+            name: dashCase
         }
         const lop = lazyObjectParser(node.contents)
         const entries = Object.entries(lop)
@@ -318,11 +331,9 @@ const lopBlock = {
             if (lopFnRef.hasOwnProperty(a)) {
                 const style = lopFnRef[a](b)
                 this.state.assign(a, maybeNewlineIndent(style))
-            }
-            else if (variables.vueComponentOptionKeys.includes(a)) {
+            } else if (variables.vueComponentOptionKeys.includes(a)) {
                 this.state.assign(lop)
-            } 
-            else {
+            } else {
                 deepAssign(this.state.options, lop)
             }
         } else {
@@ -346,48 +357,32 @@ const defaultMarkdownBlock = {
     check: yes,
     run() {
         this.token.push(this.eat())
-        // const parsed = {
-            // component: 'v-markdown',
-            // text
-        // }
-        // this.token.set("state", parsed, true)
     },
     visit(node) {
         node.state = {
-            component: 'v-markdown',
+            component: "v-markdown",
             attrs: {
                 value: node.computedText
-            },
+            }
         }
-        assignStyle(node, 'margin-bottom', node.newlines)
-
         const children = this.visitChildren(node)
         return this.state.wrap(node, children)
     },
-    jsonVisit(node) {
-        return {
-            component: 'v-markdown',
-            // style:
-            value: node.computedText
-        }
-    }
+    jsonVisit: 'presetComponent',
 }
 
 const rootVisitBlock = {
-        type: "Root",
-        visit(node) {
-                const template = node.children
-                    .map(this.visit)
-                    .filter(exists)
-                    .join("\n")
-                return this.state.build(node, template)
-        },
+    type: "Root",
+    visit(node) {
+        const template = node.children.map(this.visit).filter(exists).join("\n")
+        return this.state.build(node, template)
+    },
     jsonVisit(node) {
-            return {
-                tag: 'div',
-                class: 'root',
-                children: this.visitChildren(node)
-            }
+        return {
+            tag: "div",
+            class: "root",
+            children: this.visitChildren(node)
+        }
     }
 }
 const vuemdBlocks = [
@@ -404,7 +399,7 @@ const vuemdBlocks = [
     pseudoComponentBlock,
     defaultMarkdownBlock,
     rootVisitBlock,
-    visitListBlock,
+    visitListBlock
 ]
 
 function handleFor(state, c) {
@@ -419,6 +414,9 @@ function handleFor(state, c) {
 }
 
 function someDepth(o, r) {
+    // this is an expensive function
+    // it is used to see if any nested child tests against r.
+    // thus, it traverses the entirety of the object every time
     if (isString(o)) {
         if (r.test(o)) {
             return true
@@ -441,22 +439,9 @@ function someDepth(o, r) {
     }
     return runner(o)
 }
-/* @bookmark 1709344576 defaultMarkdownBlock */
 function matcherf(ref) {
     const r = reWrap(ref, /^($1)(?: +(.+)|$)/)
-    // console.log(r)
     return function lambda(s) {
         return match(s.text, r)
     }
-}
-function visitNode(node) {
-            return this.state.wrap(node, this.visitChildren(node))
-}
-
-function assignStyle(node, k, v) {
-    if (!v) {
-        return 
-    }
-    const style = csx.apply(k, v)
-    deepAssign(node, 'state', 'style', k, style)
 }

@@ -1,3 +1,4 @@
+import {specialComponentWrapper} from "/home/kdog3682/2024-javascript/txflow/specialComponentWrapper.js"
 import * as variables from "/home/kdog3682/2023/variables.js"
 import * as csx from "/home/kdog3682/2024-javascript/csx/main.js"
 import {
@@ -241,9 +242,9 @@ const defaultBlock = {
     check: yes,
     run() {
         const line = this.eat()
-        const aliases = {
-            container: "v-container"
-        }
+        // const aliases = {
+            // container: "v-container"
+        // }
         const parsed = htmlParser(line.text)
         if (parsed.tag== 'template' && len(parsed)== 1) {
             parsed.attrs = {
@@ -257,9 +258,6 @@ const defaultBlock = {
         }
         if (parsed.implied) this.token.set("implied", parsed.implied, true)
         if (parsed.ignored) this.token.set("ignored", parsed.ignored, true)
-        if (parsed.component in aliases) {
-            parsed.component = aliases[parsed.component]
-        }
         this.token.set("state", parsed, true)
     },
     visit(node) {
@@ -267,6 +265,7 @@ const defaultBlock = {
             this.state.assign("componentKeys", [node.state.component])
         }
         const children = this.visitChildren(node)
+        specialComponentWrapper(node)
         return this.state.wrap(node, children)
     }
 }
