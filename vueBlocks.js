@@ -1,4 +1,5 @@
-import {specialComponentWrapper} from "/home/kdog3682/2024-javascript/txflow/specialComponentWrapper.js"
+import {World} from "/home/kdog3682/2024-javascript/shapelang/World.js"
+import {presets, specials, callableComponentWrapper, specialComponentWrapper} from "/home/kdog3682/2024-javascript/txflow/specialComponentWrapper.js"
 import * as variables from "/home/kdog3682/2023/variables.js"
 import * as csx from "/home/kdog3682/2024-javascript/csx/main.js"
 import {
@@ -11,6 +12,27 @@ export { vueBlocks }
 import { lazyObjectParser } from "../../2023/lazyObjectParser2.js"
 import { xmlString } from "../../2023/xmlString2.js"
 import { htmlParser } from "../../2023/htmlParser2.js"
+const codeblockRef = {
+    shapelang(s) {
+        return World.from(s)
+    }
+}
+const codeBlock = {
+    priority: "A",
+    type: "codeblock",
+    match: /^(shapelang|pre)/,
+    run() {
+        const name = this.matches[0]
+        this.token.set("blockName", name, true)
+        this.getBlock({ includeStartpoint: false, includeEndpoint: false })
+    },
+    visit(node) {
+        // return '<div>hi</div>'
+        return codeblockRef[node.blockName](node.computedText)
+        throw node.blockName
+        throw {s: node.computedText}
+    }
+}
 
 const switchBlock = {
     priority: "A",
@@ -84,7 +106,36 @@ const inlineDirective = {
 // you need more support than 25% to 50% of your parents.
 // we were just kids
 // i can provide warm support
+const callableBlock = {
+    priority: "A",
+    type: "callable",
+    match: /^\w+(?:\.\w+)*\(.*?\)/,
+    run() {
+        const stat = parseCallable(this.eat().text)
+        // if (stat.name == 'v') {
+            // const prevToken = this.store.find((x) => x.startIndent === this.token.startIndent)
+            // throw prevToken
+            // throw getLast(this.store)
+        // }
+        this.token.assign('state', stat)
+    },
+    visit(node) {
+        const state = node.state
+        const name = state.name
+        if (name in specials) {
+            return specials[name](node)
+        }
 
+        if (state.members) {
+            const fn = dictGetter(presets, name, ...state.members)
+            return fn(state.kwargs)
+        }
+
+        const children = this.visitChildren(node)
+        callableComponentWrapper(node, children)
+        return this.state.wrap(node, children)
+    }
+}
 const constBlock = {
     priority: "A",
     type: "const",
@@ -261,11 +312,12 @@ const defaultBlock = {
         this.token.set("state", parsed, true)
     },
     visit(node) {
-        if (node.state.component) {
-            this.state.assign("componentKeys", [node.state.component])
-        }
         const children = this.visitChildren(node)
         specialComponentWrapper(node)
+        // if (node.state.component) {
+            // this.state.assign("componentKeys", [node.state.component])
+        // }
+        // not that necessary actually to do this
         return this.state.wrap(node, children)
     }
 }
@@ -280,7 +332,10 @@ const rootVisitBlock = {
             return this.state.build(node, template)
         }
 }
+// no list blocks
 const vueBlocks = [
+    callableBlock,
+    codeBlock,
     caseBlock,
     switchBlock,
     functionBlock,
@@ -332,3 +387,4 @@ function someDepth(o, r) {
     return runner(o)
 }
 /* @bookmark 1709344576 defaultblock */
+    // console.log(Deno)

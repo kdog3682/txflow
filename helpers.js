@@ -13,11 +13,16 @@ export {
 
 function normalizeContents(token) {
     const indent = token.startIndent
+    const startIndent = token.contents[0]?.ind
+    // console.log(token.startIndent)
     token.contents.forEach((content, i) => {
-        const spaces = Math.max(content.ind - token.startIndent, 0)
+        const spaces = Math.max(content.ind - startIndent, 0)
+        // console.log(content)
+        // console.log({spaces})
         content.raw = ' '.repeat(spaces * 4) + content.text + '\n'.repeat(content.newlines)
     })
-    token.computedText = token.contents.map((x) => x.raw).join('\n').trimEnd()
+    const s = token.contents.map((x) => x.raw).join('\n').trimEnd()
+    token.computedText = s
 }
 
 function normalizeIndents(token) {
