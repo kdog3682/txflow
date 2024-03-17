@@ -17,7 +17,60 @@ const codeblockRef = {
         return World.from(s)
     }
 }
+const logicBlock = {
+    priority: "A",
+    type: "logic",
+    match: /^(if|else|elif)( +.+)?$/,
+    run(node) {
+        this.eat()
+        this.token.assign('matches', this.matches)
+    },
+    visit(node) {
+        const [a, b] = node.matches
+
+        if (b == null) {
+            node.assign('attrs', 'v-else', '')
+        } else {
+            node.assign('attrs', variables.vmap2[a], b)
+            this.state.implicits.push(b)
+        }
+        const children = this.visitChildren(node)
+        return this.state.wrap(node, children)
+    }
+}
+const forlongBlock = {
+    priority: "A",
+    type: "forblock",
+    match: /^for +\(?(\w+)(?:, *(\w+)\)?)? +in +(.+)/,
+    run(node) {
+        this.eat()
+        this.token.assign('matches', this.matches)
+    },
+    visit(node) {
+        const [key, index, expr] = node.matches
+        const text = index ? `(${key}, ${index}) in ${expr}` : `${key} in ${expr}`
+
+        const children = this.visitChildren(node)
+        const ref = pop2(node.state?.attrs, 'ref')
+        const state = {
+            tag: 'div',
+            class: 'for-container',
+            children: [{
+                tag: 'div',
+                class: 'for-item',
+                attrs: {
+                    'v-for': text,
+                    ref,
+                },
+                children: children.map((child) => ({html: child}))
+            } ]
+        }
+        return this.state.wrap2(deepAssign(state, node.state))
+    }
+}
+
 const codeBlock = {
+
     priority: "A",
     type: "codeblock",
     match: /^(shapelang|pre)/,
@@ -76,7 +129,7 @@ const caseBlock = {
                 : node.switchCount == 0
                 ? "v-if"
                 : "v-else-if"
-        const value = m == "default" ? "" : `${node.switchExpr} == '${m}'`
+        const value = m == "default" ? "" : `${node.switchExpr} == ${m}`
         node.firstChild.assign("attrs", key, value)
         return this.visit(node.firstChild)
     }
@@ -112,11 +165,6 @@ const callableBlock = {
     match: /^\w+(?:\.\w+)*\(.*?\)/,
     run() {
         const stat = parseCallable(this.eat().text)
-        // if (stat.name == 'v') {
-            // const prevToken = this.store.find((x) => x.startIndent === this.token.startIndent)
-            // throw prevToken
-            // throw getLast(this.store)
-        // }
         this.token.assign('state', stat)
     },
     visit(node) {
@@ -165,12 +213,20 @@ const attrBlock = {
         if (isSlot) {
             label = "#" + label
         }
-        const key = variables.vmap2[b] || b
+        let key = variables.vmap2[b] || b
         const value = c || b
         if (key == "v-for") {
-            return handleFor(this, c)
+            try {
+                return handleFor(this, c)
+            } catch(e) {
+                key = 'for'
+            }
         }
-        if (key == "v-if" || key == "v-else-if" || isSlot || key == "v-model") {
+        if (key == 'v-model') {
+            this.token.assign("dataKeys", [value])
+        }
+        else if (key == "v-if" || key == "v-else-if" || isSlot) {
+            // console.log('implied', [value])
             this.token.assign("implied", [value])
         }
         this.token.assign("state", label, key, value)
@@ -181,10 +237,22 @@ const attrBlock = {
     }
 }
 
+const computedFunctionBlock = {
+    priority: "A",
+    type: "function",
+    match: /^(?:computed|watch) +(\w+).*?{ *$/,
+    run() {
+        this.getBlock({ includeEndpoint: true })
+    },
+    visit(node) {
+        this.state.handleFunction(node)
+    }
+}
+
 const functionBlock = {
     priority: "A",
     type: "function",
-    match: /^(?:async +)?(?:function +)?(\w+).*?{ *$/,
+    match: /^(?:(?:async|computed|watch) +)?(?:function +)?(\w+).*?{ *$/,
     run() {
         this.getBlock({ includeEndpoint: true })
     },
@@ -236,6 +304,10 @@ const lopBlock = {
                 this.state.implicits.push(b.value)
                 // you can have additional stuff ...
             },
+            staticClass(componentState, parent, b) {
+                parent.assign("classes", [b])
+            },
+
             class(componentState, parent, b) {
                 function fn() {
                     const filter = ([k, v]) => {
@@ -273,13 +345,17 @@ const lopBlock = {
                 deepAssign(this.state.options, lop)
             }
         } else {
-            // console.log(lop)
             if (a in lopRef) {
                 lopRef[a](this.state, node.parent, b)
-            } else if (someDepth(b, /^this\.\w+$/)) {
+            } 
+            else if (a == 'css') {
+                node.parent.assign(csx.toStyleObject(csx.converter(b)))
+            }
+            else if (someDepth(b, /^this\.\w+$/)) {
+                console.log('doing someDepth')
+                // doing some depth
                 deepAssign(node.parent, "computedLopStyle", a, b)
             } else {
-                // console.log(lop)
                 node.parent.assign(csx.toStyleObject(csx.converter(lop)))
             }
         }
@@ -334,11 +410,14 @@ const rootVisitBlock = {
 }
 // no list blocks
 const vueBlocks = [
+    computedFunctionBlock,
+    functionBlock,
     callableBlock,
+logicBlock,
+forlongBlock,
     codeBlock,
     caseBlock,
     switchBlock,
-    functionBlock,
     inlineDirective,
     attrBlock,
     commentBlock,

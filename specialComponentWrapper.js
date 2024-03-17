@@ -102,6 +102,45 @@ function callableComponentWrapper(node, externalChildren) {
 
 
 const customComponentRef2 = {
+    container: {
+        self: {
+            handler(attrs) {
+                const base = {
+                    attrs: {
+                        name: attrs.name
+                    },
+                    style: {
+                        'margin-bottom': '20px'
+                    }
+                }
+                if (attrs.type) {
+                    const ref = customComponentRef2[attrs.type]
+                    if (ref) {
+                        deepAssign(base, ref(attrs))
+                    }
+                }
+                return base
+            }
+        }
+    },
+
+    columns: {
+        self: {
+            handler({gap, left, size, align}) {
+                const p = {
+                    display: 'flex',
+                }
+                if (align) {
+                    p['align-items'] = 'center'
+                }
+                if (gap) {
+                    p['gap'] = gap + 'pt'
+                }
+                return p
+            }
+        }
+    },
+
     flex: {
         self: {
             handler({gap, align}) {
@@ -127,6 +166,22 @@ const customComponentRef2 = {
     }
 }
 const customComponentRef = {
+
+    linebreak: {
+        self: {
+            handler(args, kwargs) {
+                return {
+                    tag: 'div',
+                    style: {
+                        width: '100%',
+                        'border-bottom': args[0] + 'px solid blue',
+                        'padding-bottom': '5px',
+                        'margin-bottom': '5px',
+                    }
+                }
+            }
+        }
+    },
 
     divider: {
         self: {
@@ -169,19 +224,25 @@ const customComponentRef = {
 function customComponentWrapper(node) {
 
     const {component, attrs} = node.state
-    if (!component) {
+    if (!component || /^[a-zA-Z]\w*-\w/.test(component)) {
         return 
     }
-    const [key, className] = component == 'container' 
-            ? [attrs.type, component]
-            : [component, component]
+    function getter() {
+
+            try {
+                return component == 'container' 
+                ? [attrs?.type || 'container', component]
+                : [component, component]
+            } catch(e) {
+                console.log(component)
+                throw e
+            }
+    }
+    const [key, className] = getter()
 
     // console.log(customComponentRef2)
     // console.log({key}, console.log(customComponentRef2.hasOwnProperty(key)))
-    const ref = customComponentRef2[key]
-    if (!ref) {
-        throw component
-    }
+    const ref = must(customComponentRef2, key)
     const {self, children} = ref
     if (self) {
         if (self.handler) {
@@ -202,7 +263,7 @@ function handle(node, value) {
         node.assign(value)
     }
     else {
-        node.assign('style', style)
+        node.assign('style', value)
     }
 }
 function childHandler(node, value) {
