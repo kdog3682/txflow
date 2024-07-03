@@ -83,9 +83,12 @@ const codeBlock = {
     },
     visit(node) {
         // return '<div>hi</div>'
-        return codeblockRef[node.blockName](node.computedText)
-        throw node.blockName
-        throw {s: node.computedText}
+        try {
+            return codeblockRef[node.blockName](node.computedText)
+        } catch(e) {
+            console.log('ERROR', e.toString())
+            pause(node.blockName, node.computedText)
+        }
     }
 }
 
@@ -251,6 +254,20 @@ const computedFunctionBlock = {
     }
 }
 
+const skipBlock = {
+    priority: "A",
+    type: "skip",
+    match: /^skip/,
+    run() {
+        this.getBlock({ includeEndpoint: true })
+    },
+    visit(node) {
+        console.log('skipping', node.computedText)
+        return 
+        this.state.handleFunction(node)
+    }
+}
+
 const functionBlock = {
     priority: "A",
     type: "function",
@@ -285,11 +302,17 @@ const commentBlock = {
     }
 }
 
+const stylesheetBlock = {
+    priority: 1000,
+    desc: "a block of regular style.css code",
+    // no
+}
+
 const lopBlock = {
     priority: 1000,
     desc: "lops and labels",
     type: "lop",
-    match: /^([a-zA-Z][\w-]*):(?: +\$?\w+.*)?$/,
+    match: /^([a-zA-Z][\w-]*):(?: +[/$]?\w+.*)?$/,
     run() {
         this.getBlock({ includeEndpoint: false })
     },
@@ -330,12 +353,20 @@ const lopBlock = {
             css: csx.toHtmlStyle,
             name: dashCase,
         }
-        const lop = lazyObjectParser(node.contents)
+        // FIX using node.computedText instead of node.contents
+        // because the array is getting messed up
+        const lop = lazyObjectParser(node.computedText)
+        // pause(lop, node.computedText)
         const entries = Object.entries(lop)
         assert(entries.length == 1, "entries.length will always be 1")
         const [a, b] = entries[0]
 
         if (node.startIndent == 0) {
+            // if (a == 'data' && lopDataRef.hasOwnProperty(b)) {
+                // const data = lazyObjectParser(lopDataRef(b))
+                // this.state.assign({data})
+                // return
+            // }
             if (lopFnRef.hasOwnProperty(a)) {
                 const style = lopFnRef[a](b)
                 this.state.assign(a, maybeNewlineIndent(style))
@@ -354,6 +385,15 @@ const lopBlock = {
             } 
             else if (a == 'css' || a == 'c') {
                 node.parent.assign({style: csx.fast(b)})
+            }
+
+            else if (a == 'children') {
+                const style = {style: csx.fast(b)}
+                node.parent.children.forEach((child) => {
+                    if (child.state.tag || child.state.component) {
+                    child.assign(style)
+                    }
+                })
             }
             else if (someDepth(b, /^this\.\w+$/)) {
                 console.log('doing someDepth')
@@ -392,8 +432,9 @@ const defaultBlock = {
         this.token.set("state", parsed, true)
     },
     visit(node) {
-        const children = this.visitChildren(node)
+        ////// 1712864699 CHANGED: swapped line order //////
         specialComponentWrapper(node)
+        const children = this.visitChildren(node)
         // if (node.state.component) {
             // this.state.assign("componentKeys", [node.state.component])
         // }
@@ -411,6 +452,7 @@ const rootVisitBlock = {
 }
 // no list blocks
 const vueBlocks = [
+skipBlock,
     computedFunctionBlock,
     functionBlock,
     callableBlock,

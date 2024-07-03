@@ -1,5 +1,4 @@
 import * as txflow from "../main.js"
-import { clip, read } from "/home/kdog3682/2023/node-utils.js"
 
 const opts = {
     lang: 'vuemd',

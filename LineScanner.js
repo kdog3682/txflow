@@ -110,6 +110,7 @@ class LineScanner {
         const labelRE = /^([a-zA-Z][$\w-_.]*) *:/
         while (this.notDone()) {
             const maybeAttrLine = this.peek()
+            // console.log("maybeAttrLine", maybeAttrLine)
             if (labelRE.test(maybeAttrLine.text)) {
                 this.eat()
                 attrStore.push(maybeAttrLine)
@@ -127,12 +128,11 @@ class LineScanner {
     }
     maybeGetProperties() {
         const line = this.peek()
-        const regex = /(\w\S*) += +(".*?"|\$?(?:\w\S.*|\d+))/g
+        const regex = /(\w\S*) += +(".*?"|\$?(?:\w\S+|\d+))/g
         const topAttrs = findall(regex, line.text)
         const properties = topAttrs.length && dict(topAttrs, toArgument)
-
+        this.eat()
         if (properties) {
-            this.eat()
             this.token.set("properties", properties, true)
             return true
         } else {

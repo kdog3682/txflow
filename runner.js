@@ -62,14 +62,23 @@ function runner(line) {
         let res1
         if (block.attributable) {
             res1 = this.maybeGetProperties()
+            // pause(this)
             // console.log("has properties", res1)
         }
         let res2 = this.maybeGetAttributes()
         // console.log("has attrs", res2)
+        // pause(this.token)
         if (res1 === false && res2 === false && block.needsToAdvance) {
+            // return
             // console.log('eating to advance')
+            // this.token.push(this.eat())
+            // pause(this.token)
             // pause('a')
-            this.eat()
+            //
+            // console.log(this.eat())
+
+            // const status = block.run.call(this, ...args)
+            // return
         }
     }
 
@@ -78,7 +87,7 @@ function runner(line) {
         if (status === false) {
             return
         }
-    } else if (this.matches.length) {
+    } else if (this.matches?.length) {
         // new insertion 
         // for typst block ...
         // but these changes ... are going to effect vueblocks
@@ -99,15 +108,22 @@ function runner(line) {
             }
         }
         else if (this.options.combineDefaults && this.token.type == 'default' && last?.type == 'default') {
+            if (this.token.attributes) {
+                return this.store.push(this.token)
+            }
             if (this.combineDefaultsBreakOnNewlines) {
+                pause('asdf')
                 this.combineDefaultsBreakOnNewlines = false
                 this.store.push(this.token)
-            } else {
+            } else if (this.token.contents[0].ind == last.contents[0].ind) {
+                // pause(this.token.contents)
                 last.contents.push(...this.token.contents)
                 if (this.options.combineDefaultsBreakOnNewlines && this.token.contents[0].newlines) {
                     throw this.token
                     this.combineDefaultsBreakOnNewlines = true
                 }
+            } else {
+                this.store.push(this.token)
             }
         } else {
             this.store.push(this.token)

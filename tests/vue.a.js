@@ -66,7 +66,21 @@ p hi from {student.name}
             return 
         }
 
-// chosen
+------------------------------------------------------------
+// grid affects its children directly via style
+
+flex layout = vertically-centered spacing = 10
+
+    grid template = ab|c
+        width: 100%
+        children: tac
+
+        h1 {chinese}
+        h2 {pinyin}
+        h3 {label}
+
+    v-img width = 100% height = 60% src = sunset
+
 `
 // console.log(vueFlow(chosen(s), {mode: 'var'}))
-console.log(vueflow({raw: chosen(s)}))
+console.log(vueflow(chosen(s), 'template'))
