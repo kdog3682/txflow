@@ -14,8 +14,22 @@ const componentNames = [
 ]
 
 function typstSentenceTransform(s) {
+    return fixMathSymbols(s)
     return s
 }
+
+    function fixMathSymbols(s) {
+        const scope = {
+            "+": "plus",
+            "*": "dot",
+            "=": "equals",
+            "->": "arrow",
+        }
+        function replacer(_, key) {
+            return ` #${scope[key]} `
+        }
+        return s.replace(/ +([*+=]|->) +/g, replacer)
+    }
 
 function defaultContentString(node) {
     // console.log(node.type, node.parent.type, node.parent.text, 'iii')
@@ -186,7 +200,7 @@ const typstBlocks = [
         priority: "A",
         type: "typst",
         /* @bookmark 1708816988 typst */
-        match: /^#{/,
+        match: /^#(?:let +\w+ *= *|\w+(?:-\w+)*)?[{\[\(]/,
         run() {
             this.token.set("name", "typst", true)
             this.getBlock({ includeStartpoint: true, includeEndpoint: true })

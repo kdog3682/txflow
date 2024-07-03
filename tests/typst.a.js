@@ -261,27 +261,17 @@ function addDirectory(path, dir) {
 }
 
 function hammyMathDialogue(subject, name) { // working
-    const sourcePath = `/home/kdog3682/projects/hammymath/dialogues/${subject}/raw.txt`
+    const sourcePath = `/home/kdog3682/projects/hammymath/dialogues/${subject}/drafts/${addExtension(name, 'typ')}`
     const s = read(sourcePath)
     const [text, frontmatter] = extractFrontmatter(s)
-    frontmatter.season = getSeasonAndYear()
-    if (!frontmatter.assignmentType) {
-        frontmatter.assignmentType = 'Group Dialogue'
-    }
+    assignFresh(frontmatter, {
+        season: getSeasonAndYear(),
+        assignmentType: 'Group Dialogue',
+        class: "Grade 6 Math",
+        topic: subject,
+        title: name,
+    })
     const speakers = frontmatter.speakers
-
-    function fixMathSymbols(s) {
-        const scope = {
-            "+": "plus",
-            "*": "dot",
-            "=": "equals",
-            "->": "arrow",
-        }
-        function replacer(_, key) {
-            return ` #${scope[key]} `
-        }
-        return s.replace(/ +([*+=]|->) +/g, replacer)
-    }
 
     function wechatEmojis(s) {
         const fix = (s) => {
@@ -306,31 +296,33 @@ function hammyMathDialogue(subject, name) { // working
         const b = `${a}, [\n${indent(typstFlow(text))}\n]`
         return b
     }
-    const payload = pureDialogue(removeEmojis(fixMathSymbols(text))).map(transform)
+    const payload = pureDialogue(text).map(transform)
     const metadata = defineBinding('metadata', frontmatter, {lang: 'typst'})
     const items = typstArray("items", payload)
     
+    // #import "exponent-rules.typ": exponent-rules
+    // #import "@local/iconize:0.1.0": wechat
     const template = `
     
     #import "@local/typkit:0.1.0": *
-    #import "@local/mathematical:0.1.0"
     #import "@local/mathematical:0.1.0": *
-    #import "@local/iconize:0.1.0": wechat
-    #import "exponent-rules.typ": exponent-rules
-    #import marks.math: *
+    #import "@local/magic:0.1.0"
     
     $metadata
     $items
     
-    #mathematical.dialogue(items, metadata)
+    #dialogue(items, metadata)
     `
+    // exponent-rules.typ is only used for certain files ...
+    // counting ii wouldnt use it ...
+
     const p = templater(template, {metadata, items})
-    const inpath = `/home/kdog3682/projects/hammymath/dialogues/${subject}/compiled.typ`
-    // return console.log(p)
-    // append(import.meta.filename, comment(inpath))
-    write(inpath, p)
-    typst(inpath, name)
+    const outpath = `/home/kdog3682/projects/hammymath/compiled.typ`
+    write(outpath, p)
+    typst(outpath, name)
 
 }
 // hammyMathDialogue('exponents', 'exponents-i')
-//  /home/kdog3682/projects/hammymath/dialogues/exponents/compiled.typ
+hammyMathDialogue('counting', 'ii-factorials')
+// /home/kdog3682/projects/hammymath/dialogues/exponents/compiled.typ
+strokes.thin//  /home/kdog3682/projects/hammymath/compiled.typ
